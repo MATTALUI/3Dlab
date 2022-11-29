@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://threejs.org/build/three.js"></script>
+  <title>Basic Lab Start</title>
+  <style>
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: sans-serif;
+    }
+
+    canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      z-index: -100;
+    }
+
+    nav {
+      background-color: transparent;
+      padding: 1rem;
+      transition: background-color 500ms, border-bottom-color 500ms;
+      border-bottom: 1px solid;
+      border-bottom-color: rgba(255, 255, 255, 0.2);
+    }
+
+    nav a {
+      text-decoration: none;
+      color: rgba(255, 255, 255, 0.2);
+      transition: color 500ms;
+    }
+
+    nav:hover {
+      background-color: rgba(150, 150, 150, 0.2);
+      border-bottom-color: aliceblue;
+    }
+
+    nav:hover a {
+      color: aliceblue;
+    }
+  </style>
+</head>
+
+<body>
+  <nav>
+    <a href="/">HOME</a>
+  </nav>
+  <script>
+    (async () => {
+      // https://threejs.org/docs/index.html#manual/en/introduction/Creating-a-scene
+      const scene = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+
+      const renderer = new THREE.WebGLRenderer();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      document.body.appendChild(renderer.domElement);
+
+      const geometry = new THREE.BoxGeometry(1, 1, 1);
+      const edgesGeometry = new THREE.EdgesGeometry(geometry);
+      const material = new THREE.MeshBasicMaterial({ color: 0xaaaaaa });
+      const cube = new THREE.Mesh(geometry, material);
+      scene.add(cube);
+
+      // wireframe
+      const frameGeo = new THREE.EdgesGeometry(geometry);
+      const frameMat = new THREE.LineBasicMaterial({ color: 0xff0000 });
+      const wireframe = new THREE.LineSegments(frameGeo, frameMat);
+      scene.add(wireframe);
+
+      camera.position.z = 5;
+
+      function animate() {
+        requestAnimationFrame(animate);
+
+        cube.rotation.x += 0.01;
+        cube.rotation.y += 0.01;
+
+        wireframe.rotation.x += 0.01;
+        wireframe.rotation.y += 0.01;
+
+        renderer.render(scene, camera);
+      };
+
+      animate();
+    })();
+  </script>
+</body>
+
+</html>

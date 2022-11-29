@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>3D LAB</title>
+  <style>
+    html,
+    body {
+      margin: 1rem;
+      font-family: sans-serif;
+      background-color: aliceblue;
+    }
+
+    p {
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid gray;
+    }
+
+    a {
+      text-decoration: none;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>3D Lab</h1>
+  <p>A place to experiment with 3D web technologies.</p>
+  <h2>Labs</h2>
+  <ul>
+    <span>Loading...</span>
+  </ul>
+  <script>
+    (async () => {
+      const req = await fetch('/registry');
+      const registry = await req.json();
+      const registryList = document.querySelector('ul');
+      registryList.innerHTML = ''; // Clear out loading text
+      registry.forEach(lab => {
+        const li = document.createElement('li');
+        const a = document.createElement('a');
+
+        li.appendChild(a);
+        a.innerHTML = lab.replace(/[-]/g, ' ').toUpperCase();
+        a.href = `/${lab}`;
+
+        registryList.appendChild(li);
+      }); 
+    })();
+  </script>
+</body>
+
+</html>
