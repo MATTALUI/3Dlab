@@ -40,6 +40,10 @@
     input {
       height: fit-content;
     }
+
+     li {
+      margin-bottom: 0.125rem;
+     }
   </style>
 </head>
 
@@ -50,14 +54,14 @@
     <h2>Labs</h2>
     <input type="text" placeholder="Search Labs"/>
   </header>
-  <ul>
+  <ol>
     <span>Loading...</span>
-  </ul>
+  </ol>
   <script>
     (async () => {
       const req = await fetch('/registry');
       const registry = await req.json();
-      const registryList = document.querySelector('ul');
+      const registryList = document.querySelector('ol');
       let displayedRegistry = registry;
 
       const renderRegistry = () => {
@@ -67,7 +71,10 @@
           const a = document.createElement('a');
 
           li.appendChild(a);
-          a.innerHTML = lab.replace(/[-]/g, ' ').toUpperCase();
+          a.innerHTML = lab
+            .replace(/^\d*-/, '') // Remove number prefix
+            .replace(/[-]/g, ' ') // Swap dashes for spaces
+            .toUpperCase();       // BIG LETTERS ONLY!
           a.href = `/${lab}`;
 
           registryList.appendChild(li);

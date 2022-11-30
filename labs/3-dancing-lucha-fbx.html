@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="page-number" content="3">
+  <script src="https://threejs.org/build/three.js"></script>
+  <script src="/js/three-controls/OrbitControls-146.js"></script>
+  <title>Dancing Lucha FBX</title>
+  <style>
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: sans-serif;
+    }
+
+    canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      z-index: -100;
+    }
+
+    nav {
+      background-color: transparent;
+      padding: 1rem;
+      transition: background-color 500ms, border-bottom-color 500ms;
+      border-bottom: 1px solid;
+      border-bottom-color: rgba(255, 255, 255, 0.2);
+    }
+
+    nav a {
+      text-decoration: none;
+      color: rgba(255, 255, 255, 0.2);
+      transition: color 500ms;
+    }
+
+    nav:hover {
+      background-color: rgba(150, 150, 150, 0.2);
+      border-bottom-color: aliceblue;
+    }
+
+    nav:hover a {
+      color: aliceblue;
+    }
+  </style>
+</head>
+
+<body>
+  <nav>
+    <a href="/">HOME</a>
+  </nav>
+  <script>
+    (async () => {
+      const scene = new THREE.Scene();
+
+      const renderer = new THREE.WebGLRenderer();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      document.body.appendChild(renderer.domElement);
+
+      // Grid Helper
+      scene.add(new THREE.GridHelper(50, 11));
+
+      // Camera
+      const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+      camera.position.set(-0.51, 27.4, 40.46);
+
+      // Orbital Camera Controls
+      const controls = new THREE.OrbitControls(camera, renderer.domElement);
+
+
+      function animate() {
+        requestAnimationFrame(animate);
+        controls.update()
+
+        renderer.render(scene, camera);
+      };
+
+      animate();
+    })();
+  </script>
+</body>
+
+</html>

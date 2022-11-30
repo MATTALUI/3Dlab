@@ -2,7 +2,7 @@ const express = require('express');
 const fs      = require('fs');
 
 const app = express();
-const port = 6969;
+const port = process.env.PORT || 6969;
 
 app.use(express.static('public'));
 
