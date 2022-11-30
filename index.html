@@ -10,7 +10,8 @@
     body {
       margin: 1rem;
       font-family: sans-serif;
-      background-color: aliceblue;
+      background-color: #111;
+      color: aliceblue;
     }
 
     p {
@@ -20,6 +21,24 @@
 
     a {
       text-decoration: none;
+      color: green;
+    }
+
+    a:hover {
+      color: lightgreen;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+    }
+
+    header h2 {
+      margin-right: 1rem;
+    }
+
+    input {
+      height: fit-content;
     }
   </style>
 </head>
@@ -27,7 +46,10 @@
 <body>
   <h1>3D Lab</h1>
   <p>A place to experiment with 3D web technologies.</p>
-  <h2>Labs</h2>
+  <header>
+    <h2>Labs</h2>
+    <input type="text" placeholder="Search Labs"/>
+  </header>
   <ul>
     <span>Loading...</span>
   </ul>
@@ -36,17 +58,27 @@
       const req = await fetch('/registry');
       const registry = await req.json();
       const registryList = document.querySelector('ul');
-      registryList.innerHTML = ''; // Clear out loading text
-      registry.forEach(lab => {
-        const li = document.createElement('li');
-        const a = document.createElement('a');
+      let displayedRegistry = registry;
 
-        li.appendChild(a);
-        a.innerHTML = lab.replace(/[-]/g, ' ').toUpperCase();
-        a.href = `/${lab}`;
+      const renderRegistry = () => {
+        registryList.innerHTML = ''; // Clear out existing data
+        displayedRegistry.forEach(lab => {
+          const li = document.createElement('li');
+          const a = document.createElement('a');
 
-        registryList.appendChild(li);
-      }); 
+          li.appendChild(a);
+          a.innerHTML = lab.replace(/[-]/g, ' ').toUpperCase();
+          a.href = `/${lab}`;
+
+          registryList.appendChild(li);
+        });
+      }
+
+      renderRegistry();
+      document.querySelector('input').addEventListener('keyup', e => {
+        displayedRegistry = registry.filter(lab => lab.includes(e.target.value));
+        renderRegistry();
+      });
     })();
   </script>
 </body>
