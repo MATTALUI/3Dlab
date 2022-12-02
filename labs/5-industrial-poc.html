@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="page-number" content="5">
+  <script src="https://threejs.org/build/three.js"></script>
+  <script src="/js/three-loaders/GLTFLoader-147.js"></script>
+  <script src="/js/utils.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dat.gui@0.7.9/build/dat.gui.min.js"></script>
+  <title>Industrial POC</title>
+  <style>
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: sans-serif;
+    }
+
+    canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      z-index: -100;
+    }
+
+    nav {
+      background-color: transparent;
+      padding: 1rem;
+      transition: background-color 500ms, border-bottom-color 500ms;
+      border-bottom: 1px solid;
+      border-bottom-color: rgba(255, 255, 255, 0.2);
+    }
+
+    nav a {
+      text-decoration: none;
+      color: rgba(255, 255, 255, 0.2);
+      transition: color 500ms;
+    }
+
+    nav:hover {
+      background-color: rgba(150, 150, 150, 0.2);
+      border-bottom-color: aliceblue;
+    }
+
+    nav:hover a {
+      color: aliceblue;
+    }
+
+    #gui {
+      position: fixed;
+      /* top: 3.125rem; */
+      bottom: 0;
+      right: 0;
+    }
+  </style>
+</head>
+
+<body>
+  <nav>
+    <a href="/">HOME</a>
+  </nav>
+  <script>
+    (async () => {
+      // https://threejs.org/docs/index.html#manual/en/introduction/Creating-a-scene
+      const scene = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+
+      const loader = new THREE.GLTFLoader();
+
+      const renderer = new THREE.WebGLRenderer();
+      renderer.setClearColor(0x999999);
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      document.body.appendChild(renderer.domElement);
+
+      // Grid Helper
+      scene.add(new THREE.GridHelper(50, 11));
+
+      // Axes Helper
+      scene.add(new THREE.AxesHelper(5));
+
+      // Ambient Light
+      const ambientLight = new THREE.AmbientLight(0xFFFFFF);
+      scene.add(ambientLight);
+
+      // GUI
+      const gui = new dat.GUI({ autoPlace: false });
+      gui.domElement.id = 'gui';
+      document.body.appendChild(gui.domElement);
+      const guiOptions = {
+        x: 31,
+        y: 1,
+        z: 6,
+      };
+      gui.add(guiOptions, 'x');
+      gui.add(guiOptions, 'y');
+      gui.add(guiOptions, 'z');
+
+      let leftDown = false;
+      let rightDown = false;
+      let upDown = false;
+      let downDown = false;
+      let angle = 105;
+      document.body.addEventListener('keydown', (e) => {
+        if (e.code === 'ArrowLeft') { leftDown = true; }
+        else if (e.code === 'ArrowRight') { rightDown = true; }
+        else if (e.code === 'ArrowUp') { upDown = true; }
+        else if (e.code === 'ArrowDown') { downDown = true; }
+      });
+      document.body.addEventListener('keyup', (e) => {
+
+        if (e.code === 'ArrowLeft') { leftDown = false; }
+        else if (e.code === 'ArrowRight') { rightDown = false; }
+        else if (e.code === 'ArrowUp') { upDown = false; }
+        else if (e.code === 'ArrowDown') { downDown = false; }
+      })
+
+
+      // Load a glTF resource
+      loader.load(
+        '/models/elevator.gltf',
+        gltf => {
+          gltf.scene.scale.multiplyScalar(3);
+          scene.add(gltf.scene);
+
+          // gltf.animations; // Array<THREE.AnimationClip>
+          // gltf.scene; // THREE.Group
+          // gltf.scenes; // Array<THREE.Group>
+          // gltf.cameras; // Array<THREE.Camera>
+          // gltf.asset; // Object
+
+        },
+        xhr => console.log((xhr.loaded / xhr.total * 100) + '% loaded'),
+        console.error
+      );
+
+      function animate() {
+        requestAnimationFrame(animate);
+        if (leftDown) angle += 1;
+        if (rightDown) angle -= 1;
+        if (angle > 360) angle -= 360;
+        if (angle < 0) angle += 360;
+        const rotRads = Utils.degToRad(angle);
+
+        if (upDown) {
+          guiOptions.x = guiOptions.x + Math.cos(Utils.degToRad(angle + 90)) * 0.1;
+          guiOptions.z = guiOptions.z + Math.sin(Utils.degToRad(angle - 90)) * 0.1;
+        } else if (downDown) {
+          guiOptions.x = guiOptions.x - Math.cos(Utils.degToRad(angle + 90)) * 0.1;
+          guiOptions.z = guiOptions.z - Math.sin(Utils.degToRad(angle - 90)) * 0.1;
+        }
+
+        camera.rotation.y = rotRads;
+
+        camera.position.set(
+          guiOptions.x,
+          guiOptions.y,
+          guiOptions.z,
+        );
+
+        for (const controller of gui.__controllers) {
+          controller.updateDisplay();
+        }
+
+        renderer.render(scene, camera);
+      };
+
+      animate();
+    })();
+  </script>
+</body>
+
+</html>
