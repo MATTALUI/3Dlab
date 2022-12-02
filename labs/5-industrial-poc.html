@@ -81,17 +81,30 @@
       scene.add(new THREE.AxesHelper(5));
 
       // Ambient Light
-      const ambientLight = new THREE.AmbientLight(0xFFFFFF);
+      const ambientLight = new THREE.AmbientLight(0x444444);
       scene.add(ambientLight);
+
+      // Fog
+      scene.fog = new THREE.Fog(0x999999, 0, 150);
+      // scene.fog = new THREE.FogExp2(0x999999, 0.01);
+
+      // Directional Light
+      const directionalLight = new THREE.DirectionalLight(0xFFFFFF, 0.8);
+      scene.add(directionalLight);
+      directionalLight.position.set(-80, 60, 20);
+
+      // Directional Light Helper
+      const dLightHelper = new THREE.DirectionalLightHelper(directionalLight, 5);
+      scene.add(dLightHelper);
 
       // GUI
       const gui = new dat.GUI({ autoPlace: false });
       gui.domElement.id = 'gui';
       document.body.appendChild(gui.domElement);
       const guiOptions = {
-        x: 31,
+        x: -52,
         y: 1,
-        z: 6,
+        z: 133,
       };
       gui.add(guiOptions, 'x');
       gui.add(guiOptions, 'y');
@@ -101,20 +114,49 @@
       let rightDown = false;
       let upDown = false;
       let downDown = false;
-      let angle = 105;
+      let horAngle = 0;
+      let vertAngle = 0;
       document.body.addEventListener('keydown', (e) => {
-        if (e.code === 'ArrowLeft') { leftDown = true; }
-        else if (e.code === 'ArrowRight') { rightDown = true; }
-        else if (e.code === 'ArrowUp') { upDown = true; }
-        else if (e.code === 'ArrowDown') { downDown = true; }
+        // if (e.code === 'ArrowLeft') { leftDown = true; }
+        // else if (e.code === 'ArrowRight') { rightDown = true; }
+        if (e.code === 'ArrowUp' || e.code === 'KeyW') { upDown = true; }
+        else if (e.code === 'ArrowDown' || e.code === 'KeyS') { downDown = true; }
       });
       document.body.addEventListener('keyup', (e) => {
 
         if (e.code === 'ArrowLeft') { leftDown = false; }
         else if (e.code === 'ArrowRight') { rightDown = false; }
-        else if (e.code === 'ArrowUp') { upDown = false; }
-        else if (e.code === 'ArrowDown') { downDown = false; }
+        else if (e.code === 'ArrowUp' || e.code === 'KeyW') { upDown = false; }
+        else if (e.code === 'ArrowDown' || e.code === 'KeyS') { downDown = false; }
       })
+
+      // Hook pointer lock state change events for different browsers
+      const canvas = document.querySelector('canvas');
+      renderer.domElement.addEventListener('click', () => {
+        canvas.requestPointerLock = canvas.requestPointerLock ||
+          canvas.mozRequestPointerLock;
+
+        canvas.requestPointerLock();
+      });
+
+      const updateCamera = (e) => {
+        horAngle -= e.movementX * 0.75;
+        vertAngle -= e.movementY * 2;
+      }
+      
+      document.addEventListener('pointerlockchange', lockChangeAlert, false);
+      document.addEventListener('mozpointerlockchange', lockChangeAlert, false);
+
+      function lockChangeAlert() {
+        if (document.pointerLockElement === canvas ||
+          document.mozPointerLockElement === canvas) {
+          console.log('The pointer lock status is now locked');
+          document.addEventListener("mousemove", updateCamera, false);
+        } else {
+          console.log('The pointer lock status is now unlocked');
+          document.removeEventListener("mousemove", updateCamera, false);
+        }
+      }
 
 
       // Load a glTF resource
@@ -137,21 +179,26 @@
 
       function animate() {
         requestAnimationFrame(animate);
-        if (leftDown) angle += 1;
-        if (rightDown) angle -= 1;
-        if (angle > 360) angle -= 360;
-        if (angle < 0) angle += 360;
-        const rotRads = Utils.degToRad(angle);
+        // Cycle horAngle
+        if (leftDown) horAngle += 1;
+        if (rightDown) horAngle -= 1;
+        if (horAngle > 360) horAngle -= 360;
+        if (horAngle < 0) horAngle += 360;
+        // Clamp vertAngle
+        vertAngle = Math.min(vertAngle, 90);
+        vertAngle = Math.max(vertAngle, -90);
 
         if (upDown) {
-          guiOptions.x = guiOptions.x + Math.cos(Utils.degToRad(angle + 90)) * 0.1;
-          guiOptions.z = guiOptions.z + Math.sin(Utils.degToRad(angle - 90)) * 0.1;
+          guiOptions.x = guiOptions.x + Math.cos(Utils.degToRad(horAngle + 90)) * 0.25;
+          guiOptions.z = guiOptions.z + Math.sin(Utils.degToRad(horAngle - 90)) * 0.25;
         } else if (downDown) {
-          guiOptions.x = guiOptions.x - Math.cos(Utils.degToRad(angle + 90)) * 0.1;
-          guiOptions.z = guiOptions.z - Math.sin(Utils.degToRad(angle - 90)) * 0.1;
+          guiOptions.x = guiOptions.x - Math.cos(Utils.degToRad(horAngle + 90)) * 0.25;
+          guiOptions.z = guiOptions.z - Math.sin(Utils.degToRad(horAngle - 90)) * 0.25;
         }
 
-        camera.rotation.y = rotRads;
+        camera.rotation.y = Utils.degToRad(horAngle);
+        // I don't have the math skills to figure out this gimbal lock issue
+        // camera.rotation.x = Utils.degToRad(vertAngle); // Correct when vertAngle is 0 / inverted for 180;
 
         camera.position.set(
           guiOptions.x,
