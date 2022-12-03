@@ -54,6 +54,36 @@
       bottom: 0;
       right: 0;
     }
+
+    #reticle {
+      position: fixed;
+      top: 50%;
+      right: 50%;
+      /* display: inline-block; */
+      display: none;
+      width: 5px;
+      height: 5px;
+      border-radius: 100%;
+      background-color: rgba(255, 255, 255, 0.25);
+    }
+
+    #player-data-collector {
+      position: fixed;
+      top: 40%;
+      right: 25%;
+      background-color: rgba(255, 255, 255, 0.25);
+      width: 50%;
+      padding: 1em;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      border-radius: 1em;
+    }
+
+    #player-data-collector>* {
+      margin-bottom: 0.5em;
+    }
   </style>
 </head>
 
@@ -61,6 +91,12 @@
   <nav>
     <a href="/">HOME</a>
   </nav>
+  <span id="reticle"></span>
+  <div id="player-data-collector">
+    <input type="text" placeholder="Name">
+    <input type="color" placeholder="Name">
+    <button>Play</button>
+  </div>
   <script>
     (async () => {
       // https://threejs.org/docs/index.html#manual/en/introduction/Creating-a-scene
@@ -116,47 +152,68 @@
       let downDown = false;
       let horAngle = 0;
       let vertAngle = 0;
-      document.body.addEventListener('keydown', (e) => {
-        // if (e.code === 'ArrowLeft') { leftDown = true; }
-        // else if (e.code === 'ArrowRight') { rightDown = true; }
-        if (e.code === 'ArrowUp' || e.code === 'KeyW') { upDown = true; }
-        else if (e.code === 'ArrowDown' || e.code === 'KeyS') { downDown = true; }
-      });
-      document.body.addEventListener('keyup', (e) => {
 
-        if (e.code === 'ArrowLeft') { leftDown = false; }
-        else if (e.code === 'ArrowRight') { rightDown = false; }
-        else if (e.code === 'ArrowUp' || e.code === 'KeyW') { upDown = false; }
-        else if (e.code === 'ArrowDown' || e.code === 'KeyS') { downDown = false; }
-      })
 
-      // Hook pointer lock state change events for different browsers
+
       const canvas = document.querySelector('canvas');
-      renderer.domElement.addEventListener('click', () => {
+
+      document.querySelector('#player-data-collector > button').addEventListener('click', () => {
+        console.log('Yeah, you clicked!');
+        const playerData = {
+          name: document.querySelector('#player-data-collector > input[type="text"]').value,
+          color: document.querySelector('#player-data-collector > input[type="color"]').value,
+        };
+        console.log(playerData);
+        document.querySelector('#player-data-collector').style.display = 'none';
+        document.querySelector('#reticle').style.display = 'inline-block';
+
         canvas.requestPointerLock = canvas.requestPointerLock ||
-          canvas.mozRequestPointerLock;
+            canvas.mozRequestPointerLock;
 
         canvas.requestPointerLock();
-      });
 
-      const updateCamera = (e) => {
-        horAngle -= e.movementX * 0.75;
-        vertAngle -= e.movementY * 2;
-      }
-      
-      document.addEventListener('pointerlockchange', lockChangeAlert, false);
-      document.addEventListener('mozpointerlockchange', lockChangeAlert, false);
+        document.body.addEventListener('keydown', (e) => {
+          // if (e.code === 'ArrowLeft') { leftDown = true; }
+          // else if (e.code === 'ArrowRight') { rightDown = true; }
+          if (e.code === 'ArrowUp' || e.code === 'KeyW') { upDown = true; }
+          else if (e.code === 'ArrowDown' || e.code === 'KeyS') { downDown = true; }
+        });
+        document.body.addEventListener('keyup', (e) => {
 
-      function lockChangeAlert() {
-        if (document.pointerLockElement === canvas ||
-          document.mozPointerLockElement === canvas) {
-          console.log('The pointer lock status is now locked');
-          document.addEventListener("mousemove", updateCamera, false);
-        } else {
-          console.log('The pointer lock status is now unlocked');
-          document.removeEventListener("mousemove", updateCamera, false);
+          if (e.code === 'ArrowLeft') { leftDown = false; }
+          else if (e.code === 'ArrowRight') { rightDown = false; }
+          else if (e.code === 'ArrowUp' || e.code === 'KeyW') { upDown = false; }
+          else if (e.code === 'ArrowDown' || e.code === 'KeyS') { downDown = false; }
+        })
+
+        // Hook pointer lock state change events for different browsers
+
+        renderer.domElement.addEventListener('click', () => {
+          // canvas.requestPointerLock = canvas.requestPointerLock ||
+          //   canvas.mozRequestPointerLock;
+
+          canvas.requestPointerLock();
+        });
+
+        const updateCamera = (e) => {
+          horAngle -= e.movementX * 0.75;
+          vertAngle -= e.movementY * 2;
         }
-      }
+
+        document.addEventListener('pointerlockchange', lockChangeAlert, false);
+        document.addEventListener('mozpointerlockchange', lockChangeAlert, false);
+
+        function lockChangeAlert() {
+          if (document.pointerLockElement === canvas ||
+            document.mozPointerLockElement === canvas) {
+            console.log('The pointer lock status is now locked');
+            document.addEventListener("mousemove", updateCamera, false);
+          } else {
+            console.log('The pointer lock status is now unlocked');
+            document.removeEventListener("mousemove", updateCamera, false);
+          }
+        }
+      });
 
 
       // Load a glTF resource
