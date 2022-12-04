@@ -101,7 +101,10 @@
     (async () => {
       // https://threejs.org/docs/index.html#manual/en/introduction/Creating-a-scene
       const scene = new THREE.Scene();
+      const cameraContainer = new THREE.Object3D();
       const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+      cameraContainer.add(camera);
+      scene.add(cameraContainer);
 
       const loader = new THREE.GLTFLoader();
 
@@ -253,11 +256,15 @@
           guiOptions.z = guiOptions.z - Math.sin(Utils.degToRad(horAngle - 90)) * 0.25;
         }
 
-        camera.rotation.y = Utils.degToRad(horAngle);
-        // I don't have the math skills to figure out this gimbal lock issue
-        // camera.rotation.x = Utils.degToRad(vertAngle); // Correct when vertAngle is 0 / inverted for 180;
-
-        camera.position.set(
+        
+        
+        // I don't have the math kung-fu to overcome the Gimbal Lock, so I've
+        // put the camera into a container. Instead of moving and rotating the
+        // camera, I move and rotate the container. Then only rotate the camera
+        // When looking up and down. No lock!
+        camera.rotation.x = Utils.degToRad(vertAngle); // Correct when vertAngle is 0 / inverted for 180;
+        cameraContainer.rotation.y = Utils.degToRad(horAngle);
+        cameraContainer.position.set(
           guiOptions.x,
           guiOptions.y,
           guiOptions.z,
