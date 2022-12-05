@@ -7,8 +7,12 @@
   <meta name="page-number" content="5">
   <script src="https://threejs.org/build/three.js"></script>
   <script src="/js/three-loaders/GLTFLoader-147.js"></script>
+  <script src="/js/three-renderers/CSS2DRenderer-147.js"></script>
   <script src="/js/utils.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/dat.gui@0.7.9/build/dat.gui.min.js"></script>
+  <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"
+    integrity="sha384-/KNQL8Nu5gCHLqwqfQjA689Hhoqgi2S84SNUxC3roTe4EhJ9AfLkp8QiQcU8AMzI"
+    crossorigin="anonymous"></script>
   <title>Industrial POC</title>
   <style>
     html,
@@ -103,6 +107,7 @@
       const scene = new THREE.Scene();
       const cameraContainer = new THREE.Object3D();
       const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+      camera.position.set(0, 1, 0);
       cameraContainer.add(camera);
       scene.add(cameraContainer);
 
@@ -111,7 +116,14 @@
       const renderer = new THREE.WebGLRenderer();
       renderer.setClearColor(0x999999);
       renderer.setSize(window.innerWidth, window.innerHeight);
+      const labelRenderer = new THREE.CSS2DRenderer();
+      labelRenderer.setSize(window.innerWidth, window.innerHeight);
+      labelRenderer.domElement.style.position = 'absolute';
+      labelRenderer.domElement.style.top = '0px';
+      labelRenderer.domElement.style.left = '0px';
+      labelRenderer.domElement.style.pointerEvents = 'none';
       document.body.appendChild(renderer.domElement);
+      document.body.appendChild(labelRenderer.domElement);
 
       // Grid Helper
       scene.add(new THREE.GridHelper(50, 11));
@@ -142,19 +154,92 @@
       document.body.appendChild(gui.domElement);
       const guiOptions = {
         x: -52,
-        y: 1,
+        y: 0,
         z: 133,
       };
       gui.add(guiOptions, 'x');
       gui.add(guiOptions, 'y');
       gui.add(guiOptions, 'z');
 
+      // Game data
+      let socket = io('/socket/5');
       let leftDown = false;
       let rightDown = false;
       let upDown = false;
       let downDown = false;
       let horAngle = 0;
       let vertAngle = 0;
+      let playerData = null;
+      const players = {};
+
+      const currentPosition = () => ({
+        x: guiOptions.x,
+        y: guiOptions.y,
+        z: guiOptions.z,
+      });
+
+      const addPlayer = (playerData) => {
+        players[playerData.id] = playerData;
+        const object = new THREE.Group();
+
+        const geometry = new THREE.CylinderGeometry(0.35, 0.35, 1.5, 8);
+        const material = new THREE.MeshStandardMaterial({ color: playerData.color });
+        const cylinder = new THREE.Mesh(geometry, material);
+        cylinder.position.set(0, 0.75, 0);
+        object.position.set(playerData.position.x, playerData.position.y, playerData.position.z);
+        object.add(cylinder);
+        const label = document.createElement('span');
+        label.style.color = playerData.color;
+        label.style.fontWeight = 'bold';
+        label.style.backgroundColor = 'black';
+        label.style.padding = '0.25rem';
+        label.style.borderRadius = '0.25rem';
+        label.innerHTML = playerData.name;
+        const labelObj = new THREE.CSS2DObject(label);
+        labelObj.position.set(0, 1.75, 0);
+        object.add(labelObj);
+
+        players[playerData.id].object = object;
+        scene.add(object);
+      }
+
+      socket.on("you-joined", (serverPlayerData) => {
+        console.log("event: you-joined");
+        playerData = serverPlayerData;
+
+        console.log({ playerData });
+      });
+
+      socket.on("all-players", (allPlayers) => {
+        console.log("event: all-players");
+        for (const player of Object.values(allPlayers)) {
+          console.log(player)
+          addPlayer(player);
+        }
+        console.log(players);
+      });
+
+      socket.on('player-joined', (playerData) => {
+        console.log('event: player-joined');
+        addPlayer(playerData);
+        console.log(players);
+      });
+
+      socket.on('player-disconnect', (playerData) => {
+        console.log('event: player-disconnect');
+        scene.remove(players[playerData.id].object);
+        delete players[playerData.id];
+        console.log(players);
+      });
+
+      socket.on('player-moved', (playerData) => {
+        console.log('event: player-moved');
+        players[playerData.id].object.position.set(
+          playerData.position.x,
+          playerData.position.y,
+          playerData.position.z,
+        );
+      });
 
 
 
@@ -162,29 +247,42 @@
 
       document.querySelector('#player-data-collector > button').addEventListener('click', () => {
         console.log('Yeah, you clicked!');
-        const playerData = {
+        playerData = {
           name: document.querySelector('#player-data-collector > input[type="text"]').value,
           color: document.querySelector('#player-data-collector > input[type="color"]').value,
+          position: currentPosition(),
         };
         console.log(playerData);
         document.querySelector('#player-data-collector').style.display = 'none';
         document.querySelector('#reticle').style.display = 'inline-block';
 
+        socket.emit("join-game", playerData);
+
         canvas.requestPointerLock = canvas.requestPointerLock ||
-            canvas.mozRequestPointerLock;
+          canvas.mozRequestPointerLock;
 
         canvas.requestPointerLock();
+        addPlayer({
+          id: 'test',
+          name: "Fakey McJones",
+          color: "#FF00FF",
+          position: {
+            x: -52,
+            y: 0,
+            z: 133,
+          }
+        })
 
         document.body.addEventListener('keydown', (e) => {
-          // if (e.code === 'ArrowLeft') { leftDown = true; }
-          // else if (e.code === 'ArrowRight') { rightDown = true; }
-          if (e.code === 'ArrowUp' || e.code === 'KeyW') { upDown = true; }
+          if (e.code === 'ArrowLeft' || e.code === 'KeyA') { leftDown = true; }
+          else if (e.code === 'ArrowRight' || e.code === 'KeyD') { rightDown = true; }
+          else if (e.code === 'ArrowUp' || e.code === 'KeyW') { upDown = true; }
           else if (e.code === 'ArrowDown' || e.code === 'KeyS') { downDown = true; }
         });
         document.body.addEventListener('keyup', (e) => {
 
-          if (e.code === 'ArrowLeft') { leftDown = false; }
-          else if (e.code === 'ArrowRight') { rightDown = false; }
+          if (e.code === 'ArrowLeft' || e.code === 'KeyA') { leftDown = false; }
+          else if (e.code === 'ArrowRight' || e.code === 'KeyD') { rightDown = false; }
           else if (e.code === 'ArrowUp' || e.code === 'KeyW') { upDown = false; }
           else if (e.code === 'ArrowDown' || e.code === 'KeyS') { downDown = false; }
         })
@@ -221,7 +319,7 @@
 
       // Load a glTF resource
       loader.load(
-        '/models/elevator.gltf',
+        '/models/elevator.glb',
         gltf => {
           gltf.scene.scale.multiplyScalar(3);
           scene.add(gltf.scene);
@@ -237,27 +335,42 @@
         console.error
       );
 
+      let lastPosition = {};
+      const playerHasMoved = () => {
+        if (playerData && !playerData.id) return false; // Can't move if still registering;
+        if (
+          guiOptions.x !== lastPosition.x ||
+          guiOptions.y !== lastPosition.y ||
+          guiOptions.z !== lastPosition.z
+        ) {
+          lastPosition = currentPosition();
+          return true;
+        }
+        return false;
+      }
+
       function animate() {
         requestAnimationFrame(animate);
+        // Adjust angle based on buttons pressed.
+        let movementAngle = horAngle;
+        if (upDown) { }
+        else if (downDown) { movementAngle -= 180; }
+        else if (leftDown) { movementAngle += 90; }
+        else if (rightDown) { movementAngle -= 90; }
+
         // Cycle horAngle
-        if (leftDown) horAngle += 1;
-        if (rightDown) horAngle -= 1;
         if (horAngle > 360) horAngle -= 360;
         if (horAngle < 0) horAngle += 360;
         // Clamp vertAngle
         vertAngle = Math.min(vertAngle, 90);
         vertAngle = Math.max(vertAngle, -90);
 
-        if (upDown) {
-          guiOptions.x = guiOptions.x + Math.cos(Utils.degToRad(horAngle + 90)) * 0.25;
-          guiOptions.z = guiOptions.z + Math.sin(Utils.degToRad(horAngle - 90)) * 0.25;
-        } else if (downDown) {
-          guiOptions.x = guiOptions.x - Math.cos(Utils.degToRad(horAngle + 90)) * 0.25;
-          guiOptions.z = guiOptions.z - Math.sin(Utils.degToRad(horAngle - 90)) * 0.25;
+        const isMoving = upDown || downDown || leftDown || rightDown;
+        if (isMoving) {
+          guiOptions.x = guiOptions.x + Math.cos(Utils.degToRad(movementAngle + 90)) * 0.25;
+          guiOptions.z = guiOptions.z + Math.sin(Utils.degToRad(movementAngle - 90)) * 0.25;
         }
 
-        
-        
         // I don't have the math kung-fu to overcome the Gimbal Lock, so I've
         // put the camera into a container. Instead of moving and rotating the
         // camera, I move and rotate the container. Then only rotate the camera
@@ -274,6 +387,11 @@
           controller.updateDisplay();
         }
 
+        if (playerHasMoved()) {
+          socket.emit('player-moved', currentPosition());
+        }
+
+        labelRenderer.render(scene, camera);
         renderer.render(scene, camera);
       };
 

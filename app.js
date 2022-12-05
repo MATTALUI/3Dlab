@@ -1,8 +1,53 @@
 const express = require('express');
-const fs      = require('fs');
+const fs = require('fs');
+const { createServer } = require('http');
+const { Server } = require('socket.io');
 
 const app = express();
 const port = process.env.PORT || 6969;
+const httpServer = createServer(app);
+const io = new Server(httpServer, { /* options */ });
+
+{
+  const players = {};
+
+  io
+    .of('/socket/5')
+    .on("connection", (socket) => {
+      console.log("someone connected!", socket.id);
+
+      players[socket.id] = {};
+
+      socket.on("disconnect", () => {
+        console.log("someone disconnected!", socket.id);
+        socket.broadcast.emit("player-disconnect", players[socket.id]);
+        delete players[socket.id];
+        console.log(players);
+      });
+
+      socket.on("join-game", (playerData) => {
+        players[socket.id] = playerData;
+        players[socket.id].id = socket.id;
+
+        const allOtherPlayers = { ...players };
+        delete allOtherPlayers[socket.id];
+
+        console.log(players);
+
+        socket.emit("you-joined", players[socket.id]);
+        socket.emit("all-players", allOtherPlayers);
+        socket.broadcast.emit("player-joined", players[socket.id]);
+
+      });
+
+      socket.on('player-moved', (position) => {
+        const playerData = players[socket.id];
+        playerData.position = position;
+
+        socket.broadcast.emit('player-moved', playerData);
+      });
+    });
+}
 
 app.use(express.static('public'));
 
@@ -30,6 +75,6 @@ app.get('/:labName', async (req, res, next) => {
 
 app.get('*', async (req, res) => res.sendStatus(404));
 
-app.listen(port, '0.0.0.0', () => {
+httpServer.listen(port, '0.0.0.0', () => {
   console.log(`\nlistening on 0.0.0.0:${port}\n`);
 });
