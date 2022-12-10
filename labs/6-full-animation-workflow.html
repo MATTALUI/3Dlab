@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="page-number" content="1">
+  <script src="https://threejs.org/build/three.js"></script>
+  <script src="/js/three-loaders/GLTFLoader-147.js"></script>
+  <script src="/js/three-controls/OrbitControls-146.js"></script>
+  <title>Basic Lab Start</title>
+  <style>
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: sans-serif;
+    }
+
+    canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      z-index: -100;
+    }
+
+    nav {
+      background-color: transparent;
+      padding: 1rem;
+      transition: background-color 500ms, border-bottom-color 500ms;
+      border-bottom: 1px solid;
+      border-bottom-color: rgba(255, 255, 255, 0.2);
+    }
+
+    nav a {
+      text-decoration: none;
+      color: rgba(255, 255, 255, 0.2);
+      transition: color 500ms;
+    }
+
+    nav:hover {
+      background-color: rgba(150, 150, 150, 0.2);
+      border-bottom-color: aliceblue;
+    }
+
+    nav:hover a {
+      color: aliceblue;
+    }
+  </style>
+</head>
+
+<body>
+  <nav>
+    <a href="/">HOME</a>
+  </nav>
+  <script>
+    (async () => {
+      // https://threejs.org/docs/index.html#manual/en/introduction/Creating-a-scene
+      const scene = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+
+      const renderer = new THREE.WebGLRenderer();
+      renderer.setClearColor(0x666666);
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      document.body.appendChild(renderer.domElement);
+
+      camera.position.z = -10;
+      camera.position.x = 5;
+      camera.position.y = 5;
+
+      // Ambient Light
+      const ambientLight = new THREE.AmbientLight(0xffffff);
+      scene.add(ambientLight);
+
+      // Clock
+      const clock = new THREE.Clock();
+
+      // Directional Light
+      const directionalLight = new THREE.DirectionalLight(0xFFFFFF, 0.8);
+      scene.add(directionalLight);
+      directionalLight.position.set(-10, 10, -10);
+
+      // Directional Light Helper
+      const directionalLightHelper = new THREE.DirectionalLightHelper(directionalLight, 5);
+      // scene.add(directionalLightHelper);
+
+      // Orbital Camera Controls
+      const controls = new THREE.OrbitControls(camera, renderer.domElement);
+
+      // Grid Helper
+      // scene.add(new THREE.GridHelper(50, 11));
+
+      const loader = new THREE.GLTFLoader();
+
+      let animationMixer;
+      // Load a glTF resource
+      loader.load(
+        '/models/chest.glb',
+        gltf => {
+          const model = gltf.scene;
+          scene.add(model);
+
+          animationMixer = new THREE.AnimationMixer(model);
+          const lidAnimation = gltf.animations[1];
+          const lidAction = animationMixer.clipAction(lidAnimation);
+          lidAction.play();
+
+          // gltf.animations.forEach(clip => {
+          //   const action = animationMixer.clipAction(clip);
+          //   action.loop = false;
+          //   action.setLoop(THREE.LoopOnce).play();
+          // });
+        },
+        xhr => console.log((xhr.loaded / xhr.total * 100) + '% loaded'),
+        console.error
+      );
+
+      function animate() {
+        requestAnimationFrame(animate);
+        controls.update();
+        if (animationMixer) animationMixer.update(clock.getDelta());
+
+        renderer.render(scene, camera);
+      };
+
+      animate();
+    })();
+  </script>
+</body>
+
+</html>
