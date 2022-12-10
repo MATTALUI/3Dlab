@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="page-number" content="1">
+  <script src="https://threejs.org/build/three.js"></script>
+  <script src="/js/three-controls/OrbitControls-146.js"></script>
+  <script src="/js/three-controls/OrbitControls-146.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/cannon.js/0.6.2/cannon.min.js"
+    integrity="sha512-avLcnGxl5mqAX/wIKERdb1gFNkOLHh2W5JNCfJm5OugpEPBz7LNXJJ3BDjjwO00AxEY1MqdNjtEmiYhKC0ld7g=="
+    crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <title>Basic Lab Start</title>
+  <style>
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: sans-serif;
+    }
+
+    canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      z-index: -100;
+    }
+
+    nav {
+      background-color: transparent;
+      padding: 1rem;
+      transition: background-color 500ms, border-bottom-color 500ms;
+      border-bottom: 1px solid;
+      border-bottom-color: rgba(255, 255, 255, 0.2);
+    }
+
+    nav a {
+      text-decoration: none;
+      color: rgba(255, 255, 255, 0.2);
+      transition: color 500ms;
+    }
+
+    nav:hover {
+      background-color: rgba(150, 150, 150, 0.2);
+      border-bottom-color: aliceblue;
+    }
+
+    nav:hover a {
+      color: aliceblue;
+    }
+  </style>
+</head>
+
+<body>
+  <nav>
+    <a href="/">HOME</a>
+  </nav>
+  <script>
+    (async () => {
+      /////////////////////////////////////////////////////////////////////////
+      // RENDERING                                                           //
+      /////////////////////////////////////////////////////////////////////////
+      const scene = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+
+      const renderer = new THREE.WebGLRenderer();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      document.body.appendChild(renderer.domElement);
+
+      // Orbital Camera Controls
+      const controls = new THREE.OrbitControls(camera, renderer.domElement);
+
+      // Grid Helper
+      // scene.add(new THREE.GridHelper(50, 11));
+
+      camera.position.z = 50;
+      camera.position.y = 35;
+
+      // Add Sphere
+      const sphereGeometry = new THREE.SphereGeometry(3, 15, 15);
+      const sphereMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00, wireframe: true });
+      const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
+      // scene.add(sphere);
+
+      // Add Box
+      const boxGeometry = new THREE.BoxGeometry(2, 2, 2);
+      const boxMaterial = new THREE.MeshBasicMaterial({ color: 0xffff00, wireframe: true });
+      const box = new THREE.Mesh(boxGeometry, boxMaterial);
+      scene.add(box);
+
+      // Ground
+      const planeGeometry = new THREE.PlaneGeometry(30, 30);
+      const planeMaterial = new THREE.MeshBasicMaterial({
+        color: 0xFF0000,
+        side: THREE.DoubleSide,
+        wireframe: true,
+      });
+      const plane = new THREE.Mesh(planeGeometry, planeMaterial);
+      scene.add(plane);
+
+      /////////////////////////////////////////////////////////////////////////
+      // PHYSICS                                                             //
+      /////////////////////////////////////////////////////////////////////////
+
+      // Physics Setup
+      const world = new CANNON.World();
+      world.gravity.set(0, -9.82, 0);
+      const timeStep = 1 / 60;
+
+      const groundBody = new CANNON.Body({
+        shape: new CANNON.Plane(),
+        // shape: new CANNON.Box(new CANNON.Vec3(30, 30, 0.01)),
+        // mass: 10,
+        type: CANNON.Body.Static,
+      });
+      world.addBody(groundBody);
+      groundBody.quaternion.setFromEuler(-Math.PI / 2, 0, 0);
+
+      // Box Body
+      const boxBody = new CANNON.Body({
+        mass: 1,
+        shape: new CANNON.Box(new CANNON.Vec3(1, 1, 1)), // Dimensions must be half of the dimensions of the box mesh
+        position: new CANNON.Vec3(1, 20, 0),
+      });
+      world.addBody(boxBody);
+
+      // Sphere Body
+      // const sphereBody = new CANNON.Body({
+      //   mass: 10,
+      //   shape: new CANNON.Sphere(2),
+      //   position: new CANNON.Vec3(0, 3, 0),
+      // });
+      // world.addBody(sphereBody);
+
+      function animate() {
+        requestAnimationFrame(animate);
+        world.step(timeStep);
+        controls.update();
+
+        plane.position.copy(groundBody.position);
+        plane.quaternion.copy(groundBody.quaternion);
+
+        box.position.copy(boxBody.position);
+        box.quaternion.copy(boxBody.quaternion);
+
+        // sphere.position.copy(sphereBody.position);
+        // sphere.quaternion.copy(sphereBody.quaternion);
+
+
+
+        renderer.render(scene, camera);
+      };
+
+      animate();
+    })();
+  </script>
+</body>
+
+</html>
