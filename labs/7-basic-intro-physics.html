@@ -81,7 +81,7 @@
       const sphereGeometry = new THREE.SphereGeometry(3, 15, 15);
       const sphereMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00, wireframe: true });
       const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
-      // scene.add(sphere);
+      scene.add(sphere);
 
       // Add Box
       const boxGeometry = new THREE.BoxGeometry(2, 2, 2);
@@ -108,30 +108,59 @@
       world.gravity.set(0, -9.82, 0);
       const timeStep = 1 / 60;
 
+      const groundPhysMat = new CANNON.Material();
       const groundBody = new CANNON.Body({
-        shape: new CANNON.Plane(),
-        // shape: new CANNON.Box(new CANNON.Vec3(30, 30, 0.01)),
+        // shape: new CANNON.Plane(),
+        shape: new CANNON.Box(new CANNON.Vec3(15, 15, 0.01)),
         // mass: 10,
         type: CANNON.Body.Static,
+        material: groundPhysMat,
       });
       world.addBody(groundBody);
       groundBody.quaternion.setFromEuler(-Math.PI / 2, 0, 0);
 
       // Box Body
+      const boxPhysMat = new CANNON.Material();
       const boxBody = new CANNON.Body({
         mass: 1,
         shape: new CANNON.Box(new CANNON.Vec3(1, 1, 1)), // Dimensions must be half of the dimensions of the box mesh
+        // position: new CANNON.Vec3(5, 20, 0),
         position: new CANNON.Vec3(1, 20, 0),
+        material: boxPhysMat,
       });
+      // boxBody.angularVelocity.set(0, 10, 0);
+      // boxBody.angularDamping = 0.5;
       world.addBody(boxBody);
 
       // Sphere Body
-      // const sphereBody = new CANNON.Body({
-      //   mass: 10,
-      //   shape: new CANNON.Sphere(2),
-      //   position: new CANNON.Vec3(0, 3, 0),
-      // });
-      // world.addBody(sphereBody);
+      const spherePhysMat = new CANNON.Material();
+      const sphereBody = new CANNON.Body({
+        mass: 10,
+        shape: new CANNON.Sphere(2),
+        position: new CANNON.Vec3(0, 15, 0),
+        material: spherePhysMat,
+      });
+      sphereBody.linearDamping = 0.31;
+      world.addBody(sphereBody);
+
+      // Materials
+      const groundBoxContactMat = new CANNON.ContactMaterial(
+        groundPhysMat,
+        boxPhysMat,
+        {
+          friction: 0.04,
+        }
+      );
+      world.addContactMaterial(groundBoxContactMat);
+
+      const groundSphereContactMat = new CANNON.ContactMaterial(
+        groundPhysMat,
+        spherePhysMat,
+        {
+          restitution: 0.9,
+        }
+      );
+      world.addContactMaterial(groundSphereContactMat);
 
       function animate() {
         requestAnimationFrame(animate);
@@ -144,8 +173,8 @@
         box.position.copy(boxBody.position);
         box.quaternion.copy(boxBody.quaternion);
 
-        // sphere.position.copy(sphereBody.position);
-        // sphere.quaternion.copy(sphereBody.quaternion);
+        sphere.position.copy(sphereBody.position);
+        sphere.quaternion.copy(sphereBody.quaternion);
 
 
 
