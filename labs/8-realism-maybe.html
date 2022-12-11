@@ -8,6 +8,7 @@
   <script src="https://threejs.org/build/three.js"></script>
   <script src="/js/three-controls/OrbitControls-146.js"></script>
   <script src="/js/three-loaders/RGBELoader-147.js"></script>
+  <script src="/js/three-loaders/GLTFLoader-147.js"></script>
   <title>Realism Maybe?</title>
   <style>
     html,
@@ -74,7 +75,7 @@
       // scene.add(new THREE.GridHelper(50, 11));
 
       const loader = new THREE.RGBELoader();
-      loader.load("/images/hdri/workshop.hdr", (texture) => {
+      loader.load("/images/hdri/forest.hdr", (texture) => {
         texture.mapping = THREE.EquirectangularReflectionMapping;
         scene.background = texture;
         scene.environment = texture;

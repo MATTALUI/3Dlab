@@ -10,6 +10,7 @@
   <script src="/js/three-renderers/CSS2DRenderer-147.js"></script>
   <script src="/js/utils.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/dat.gui@0.7.9/build/dat.gui.min.js"></script>
+  <script src="/js/three-loaders/RGBELoader-147.js"></script>
   <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"
     integrity="sha384-/KNQL8Nu5gCHLqwqfQjA689Hhoqgi2S84SNUxC3roTe4EhJ9AfLkp8QiQcU8AMzI"
     crossorigin="anonymous"></script>
@@ -110,9 +111,9 @@
       cameraContainer.add(camera);
       scene.add(cameraContainer);
 
-      const loader = new THREE.GLTFLoader();
-
       const renderer = new THREE.WebGLRenderer();
+      renderer.outputEncoding = THREE.sRGBEncoding;
+      renderer.toneMapping = THREE.ACESFilmicToneMapping;
       renderer.setClearColor(0x999999);
       renderer.setSize(window.innerWidth, window.innerHeight);
       const labelRenderer = new THREE.CSS2DRenderer();
@@ -315,24 +316,29 @@
         }
       });
 
+      new THREE.RGBELoader().load("/images/hdri/forest.hdr", (texture) => {
+        texture.mapping = THREE.EquirectangularReflectionMapping;
+        scene.background = texture;
+        scene.environment = texture;
 
-      // Load a glTF resource
-      loader.load(
-        'https://masterofnone-dev.s3.us-west-2.amazonaws.com/elevator2.glb',
-        gltf => {
-          gltf.scene.scale.multiplyScalar(3);
-          scene.add(gltf.scene);
+        // Load a glTF resource
+        new THREE.GLTFLoader().load(
+          'https://masterofnone-dev.s3.us-west-2.amazonaws.com/elevator2.glb',
+          gltf => {
+            gltf.scene.scale.multiplyScalar(3);
+            scene.add(gltf.scene);
 
-          // gltf.animations; // Array<THREE.AnimationClip>
-          // gltf.scene; // THREE.Group
-          // gltf.scenes; // Array<THREE.Group>
-          // gltf.cameras; // Array<THREE.Camera>
-          // gltf.asset; // Object
+            // gltf.animations; // Array<THREE.AnimationClip>
+            // gltf.scene; // THREE.Group
+            // gltf.scenes; // Array<THREE.Group>
+            // gltf.cameras; // Array<THREE.Camera>
+            // gltf.asset; // Object
 
-        },
-        xhr => console.log((xhr.loaded / xhr.total * 100) + '% loaded'),
-        console.error
-      );
+          },
+          xhr => console.log((xhr.loaded / xhr.total * 100) + '% loaded'),
+          console.error
+        );
+      });
 
       let lastPosition = {};
       const playerHasMoved = () => {
