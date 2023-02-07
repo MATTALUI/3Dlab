@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="page-number" content="10">
+  <script src="https://threejs.org/build/three.js"></script>
+  <script src="/js/utils.js"></script>
+  <script src="/js/three-controls/OrbitControls-146.js"></script>
+  <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/cannon.js/0.6.2/cannon.min.js"
+    integrity="sha512-avLcnGxl5mqAX/wIKERdb1gFNkOLHh2W5JNCfJm5OugpEPBz7LNXJJ3BDjjwO00AxEY1MqdNjtEmiYhKC0ld7g=="
+    crossorigin="anonymous" referrerpolicy="no-referrer"></script> -->
+  <script src="/js/rapier-module.js" type="module"></script>
+  <title>Land Physics</title>
+  <style>
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: sans-serif;
+    }
+
+    canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      z-index: -100;
+    }
+
+    nav {
+      background-color: transparent;
+      padding: 1rem;
+      transition: background-color 500ms, border-bottom-color 500ms;
+      border-bottom: 1px solid;
+      border-bottom-color: rgba(255, 255, 255, 0.2);
+    }
+
+    nav a {
+      text-decoration: none;
+      color: rgba(255, 255, 255, 0.2);
+      transition: color 500ms;
+    }
+
+    nav:hover {
+      background-color: rgba(150, 150, 150, 0.2);
+      border-bottom-color: aliceblue;
+    }
+
+    nav:hover a {
+      color: aliceblue;
+    }
+  </style>
+</head>
+
+<body>
+  <nav>
+    <a href="/">HOME</a>
+  </nav>
+  <script>
+    (() => {
+      const runLandPhysics = async () => {
+        await RAPIER.init();
+        const scene = new THREE.Scene();
+        const renderer = new THREE.WebGLRenderer();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setClearColor(0xAAAAAA);
+        renderer.shadowMap.enabled = true;
+        document.body.appendChild(renderer.domElement);
+
+        // Camera
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.z = 50;
+        camera.position.y = 35;
+        // camera.lookAt(new THREE.Vector3(0, 0, 0));
+
+        // Orbital Camera Controls
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+
+        // Grid Helper
+        scene.add(new THREE.GridHelper(50, 11));
+
+        // Axes Helper
+        scene.add(new THREE.AxesHelper(5));
+
+        // Physics world
+        const world = new RAPIER.World({ x: 0, y: -9.82, z: 0 })
+
+        // Ambient Light
+        const ambientLight = new THREE.AmbientLight(0x333333);
+        scene.add(ambientLight);
+
+        // Directional Light
+        const directionalLight = new THREE.DirectionalLight(0xEEEEEE, 0.8);
+        scene.add(directionalLight);
+        directionalLight.position.set(-30, 50, 0);
+        directionalLight.castShadow = true;
+        directionalLight.shadow.camera.bottom = -12;
+
+        // Land
+        const planeGeometry = new THREE.PlaneGeometry(100, 100, 30, 30);
+        const planeMaterial = new THREE.MeshStandardMaterial({
+          color: 0x00AA00,
+          side: THREE.DoubleSide,
+          wireframe: true,
+        });
+        const plane = new THREE.Mesh(planeGeometry, planeMaterial);
+        plane.receiveShadow = true;
+        scene.add(plane);
+        plane.rotation.x = -0.5 * Math.PI;
+        const planeVerts = plane.geometry.attributes.position.array;
+        const heights = [];
+        for (let i = 2; i < planeVerts.length; i += 3) {
+          planeVerts[i] += Math.floor(Math.random() * 2)
+          heights.push(planeVerts[i]);
+        }
+
+        // Player
+        const player = new THREE.Group();
+        const playerGeometry = new THREE.CylinderGeometry(1, 1, 4);
+        const playerMaterial = new THREE.MeshStandardMaterial({ color: 0x999900 })
+        const playerCyl = new THREE.Mesh(playerGeometry, playerMaterial);
+        const faceGeometry = new THREE.SphereGeometry(0.5);
+        const faceMaterial = new THREE.MeshStandardMaterial({ color: 0x990000 })
+        const face = new THREE.Mesh(faceGeometry, faceMaterial);
+        face.position.set(0, 1.5, -1);
+        player.add(playerCyl);
+        player.add(face);
+        scene.add(player);
+        const playerBodyDesc = RAPIER.RigidBodyDesc.kinematicPositionBased()//.dynamic()
+          .setTranslation(0.0, 2.0, 0.0);
+        const playerBody = world.createRigidBody(playerBodyDesc);
+        const playerColliderDesc = RAPIER.ColliderDesc.cylinder(2, 1);
+        const playerCollider = world.createCollider(playerColliderDesc, playerBody);
+
+        // Ball to kick around
+        const ball = new THREE.Mesh(
+          new THREE.SphereGeometry(3, 50, 50),
+          new THREE.MeshStandardMaterial({
+            roughness: 0,
+            metalness: 0.5,
+            color: 0xFF2200,
+            // envMap: texture, // We could set manually if we didn't want to match the scene, or scene didn't have one.
+          }),
+        );
+        scene.add(ball);
+        const ballBodyDesc = RAPIER.RigidBodyDesc.dynamic()
+          .setTranslation(12.0, 30.0, 0.0);
+        const ballBody = world.createRigidBody(ballBodyDesc);
+        const ballColliderDesc = RAPIER.ColliderDesc.ball(3);
+        const ballCollider = world.createCollider(ballColliderDesc, ballBody);
+
+        // Create the ground
+        const groundColliderDesc = RAPIER.ColliderDesc.cuboid(100.0, 0.1, 100.0);
+        // const groundColliderDesc = RAPIER.ColliderDesc.heightfield(planeVerts, {
+        //   x: 100, y: 1, z: 100
+        // });
+        world.createCollider(groundColliderDesc);
+
+
+
+        let angle = 0;
+        let upDown = false;
+        let leftDown = false;
+        let downDown = false;
+        let rightDown = false;
+        document.body.addEventListener('keydown', (e) => {
+          if (e.code === 'ArrowLeft' || e.code === 'KeyA') { leftDown = true; }
+          else if (e.code === 'ArrowRight' || e.code === 'KeyD') { rightDown = true; }
+          else if (e.code === 'ArrowUp' || e.code === 'KeyW') { upDown = true; }
+          else if (e.code === 'ArrowDown' || e.code === 'KeyS') { downDown = true; }
+        });
+        document.body.addEventListener('keyup', (e) => {
+          if (e.code === 'ArrowLeft' || e.code === 'KeyA') { leftDown = false; }
+          else if (e.code === 'ArrowRight' || e.code === 'KeyD') { rightDown = false; }
+          else if (e.code === 'ArrowUp' || e.code === 'KeyW') { upDown = false; }
+          else if (e.code === 'ArrowDown' || e.code === 'KeyS') { downDown = false; }
+        });
+
+
+
+        function animate() {
+          requestAnimationFrame(animate);
+          world.step();
+          controls.update();
+
+          const rotationSpeed = 1
+          if (leftDown) { angle += rotationSpeed; }
+          else if (rightDown) { angle -= rotationSpeed; }
+
+          if (angle > 360) angle -= 360;
+          if (angle < 0) angle += 360;
+
+          if (upDown || downDown) {
+            let mult = 0;
+            const speed = 0.25;
+            if (upDown) mult += speed;
+            if (downDown) mult -= speed;
+            const pos = playerBody.translation();
+
+            playerBody.setNextKinematicTranslation({
+              ...pos,
+              x: pos.x + Math.cos(Utils.degToRad(angle + 90)) * mult,
+              z: pos.z + Math.sin(Utils.degToRad(angle - 90)) * mult,
+            });
+            console.log("moving!");
+            // x = x + Math.cos(Utils.degToRad(angle + 90)) * mult;
+            // z = z + Math.sin(Utils.degToRad(angle - 90)) * mult;
+          }
+          playerBody.setRotation({
+            ...playerBody.rotation(),
+            // y: angle,
+            y: Utils.degToRad(angle),
+          }, true)
+
+          ball.position.copy(ballBody.translation());
+
+          const playerRotation = playerBody.rotation();
+          player.position.copy(playerBody.translation());
+          player.setRotationFromQuaternion(new THREE.Quaternion(
+            playerRotation.x,
+            playerRotation.y,
+            playerRotation.z,
+            playerRotation.w,
+          ));
+
+
+          // ball.position.copy(ballBody.position);
+
+          renderer.render(scene, camera);
+        };
+
+        animate();
+      };
+
+      const asyncPoller = setInterval(() => {
+        if (window.RAPIER) {
+          clearInterval(asyncPoller);
+          runLandPhysics();
+        } else {
+        }
+      }, 300);
+    })();
+  </script>
+</body>
+
+</html>

@@ -172,7 +172,16 @@
       gui.domElement.id = 'gui';
       document.body.appendChild(gui.domElement);
       const guiOptions = {
-        
+        // Sphere Settings
+        sphereColor: "#34ABEB",
+        sphereWireframe: false,
+        sphereSpeed: 0.01,
+        sphereMinSpeed: 0.00,
+        sphereMaxSpeed: 0.01,
+        // Spotlight Settings
+        spotAngle: 0.06,
+        spotPenumbra: 0.2,
+        spotIntensity: 1,
       };
       gui.addColor(guiOptions, 'sphereColor').onChange(color => sphere.material.color.set(color));
       gui.add(guiOptions, 'sphereWireframe').onChange(wireframe => sphere.material.wireframe = wireframe);
@@ -211,7 +220,7 @@
         // Update Spotlight
         spotlight.angle = guiOptions.spotAngle;
         spotlight.penumbra = guiOptions.spotPenumbra;
-        spotlight.intensity  = guiOptions.spotIntensity;
+        spotlight.intensity = guiOptions.spotIntensity;
         spotlightHelper.update();
 
         // Update the Raycaster

@@ -97,11 +97,28 @@
             roughness: 0,
             metalness: 0.5,
             color: 0x00FF00,
-            // envMap: texture, // We could set manually if we didn't want to match the scene, or scene didn't have one.
           }),
         );
         scene.add(sphere2);
         sphere2.position.x = -1.5;
+
+        new THREE.RGBELoader().load("/images/hdri/forest.hdr", (texture) => {
+        texture.mapping = THREE.EquirectangularReflectionMapping;
+        scene.background = texture;
+        scene.environment = texture;
+
+        // Load a glTF resource
+        new THREE.GLTFLoader().load(
+          '/models/racecar.glb',
+          gltf => {
+            // gltf.scene.scale.multiplyScalar(3);
+            scene.add(gltf.scene);
+            gltf.scene.position.z = 3;
+          },
+          xhr => console.log((xhr.loaded / xhr.total * 100) + '% loaded'),
+          console.error
+        );
+      });
       });
 
       function animate() {

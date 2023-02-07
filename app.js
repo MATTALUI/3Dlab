@@ -1,5 +1,6 @@
 const express = require('express');
 const fs = require('fs');
+const bodyParser = require('body-parser');
 const { createServer } = require('http');
 const { Server } = require('socket.io');
 
@@ -50,16 +51,26 @@ const io = new Server(httpServer, { /* options */ });
 }
 
 app.use(express.static('public'));
+app.use(bodyParser.urlencoded({ extended: false }));
+app.use(bodyParser.json());
 
 app.get('/', async (req, res, next) => {
   return res.sendFile('./index.html', { root: __dirname });
+});
+
+app.post('/test', async (req, res, next) => {
+  console.log("TEST:")
+  console.log(req.body);
+  console.log();
+
+  return res.sendStatus(200);
 });
 
 app.get('/registry', async (req, res, next) => {
   const data = fs
     .readdirSync('./labs')
     .map(lab => lab.replace('.html', ''))
-    .sort();
+    .sort((a, b) => +a.split('-')[0] - +b.split('-')[0]);
 
   return res.send(data);
 });

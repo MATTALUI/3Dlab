@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="page-number" content="12">
+  <script src="https://threejs.org/build/three.js"></script>
+  <script src="/js/utils.js"></script>
+  <script src="/js/three-loaders/RGBELoader-147.js"></script>
+  <script src="/js/three-loaders/GLTFLoader-147.js"></script>
+  <title>Space FIghter</title>
+  <style>
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: sans-serif;
+    }
+
+    canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      z-index: -100;
+    }
+
+    nav {
+      background-color: transparent;
+      padding: 1rem;
+      transition: background-color 500ms, border-bottom-color 500ms;
+      border-bottom: 1px solid;
+      border-bottom-color: rgba(255, 255, 255, 0.2);
+    }
+
+    nav a {
+      text-decoration: none;
+      color: rgba(255, 255, 255, 0.2);
+      transition: color 500ms;
+    }
+
+    nav:hover {
+      background-color: rgba(150, 150, 150, 0.2);
+      border-bottom-color: aliceblue;
+    }
+
+    nav:hover a {
+      color: aliceblue;
+    }
+  </style>
+</head>
+
+<body>
+  <nav>
+    <a href="/">HOME</a>
+  </nav>
+  <script>
+    (async () => {
+      const scene = new THREE.Scene();
+      const renderer = new THREE.WebGLRenderer();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.outputEncoding = THREE.sRGBEncoding;
+      renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      document.body.appendChild(renderer.domElement);
+
+      // Camera
+      const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+      camera.position.z = -15;
+      camera.position.y = 6;
+      // camera.position.x = 30;
+      camera.lookAt(new THREE.Vector3(0, 0, 0))
+
+      // Orbital Camera Controls
+      // const controls = new THREE.OrbitControls(camera, renderer.domElement);
+
+      // Grid Helper
+      scene.add(new THREE.GridHelper(50, 11));
+
+      // Load Space Background
+      const loader = new THREE.RGBELoader();
+      loader.load("/images/hdri/space2.hdr", (texture) => {
+        texture.mapping = THREE.EquirectangularReflectionMapping;
+        scene.background = texture;
+        scene.environment = texture;
+      });
+
+      const shipSpeed = .20;
+      const cameraDistance = 17;
+      const cameraAngle = 21;
+      const keys = {
+        up: false,
+        down: false,
+        left: false,
+        right: false,
+      }
+      let shipContainer = new THREE.Group();
+      let ship = null;
+      let posProjection = null;
+      let cameraPosProjection = null;
+      let roll = 0;
+      let pitch = 0;
+      // Load Ship
+      new THREE.GLTFLoader().load(
+        '/models/ships/x1.glb',
+        gltf => {
+          ship = gltf.scene;
+          shipContainer.add(ship);
+          // shipContainer.add(new THREE.GridHelper(25, 5));
+          shipContainer.add(camera);
+
+          posProjection = new THREE.Mesh(
+            new THREE.SphereGeometry(1, 100, 50),
+            new THREE.MeshStandardMaterial({
+              roughness: 0,
+              metalness: 0.5,
+              color: 0x00FF00,
+            }),
+          );
+          shipContainer.add(posProjection);
+
+          cameraPosProjection = new THREE.Mesh(
+            new THREE.SphereGeometry(1, 100, 50),
+            new THREE.MeshStandardMaterial({
+              roughness: 0,
+              metalness: 0.5,
+              color: 0xFF0000,
+            }),
+          );
+          shipContainer.add(cameraPosProjection);
+          cameraPosProjection.position.z = -15;
+          cameraPosProjection.position.y = 6;
+
+
+          scene.add(shipContainer);
+        },
+        xhr => console.log((xhr.loaded / xhr.total * 100) + '% loaded'),
+        console.error
+      );
+
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowLeft') keys.left = true;
+        if (e.key === 'ArrowRight') keys.right = true;
+        if (e.key === 'ArrowUp') keys.up = true;
+        if (e.key === 'ArrowDown') keys.down = true;
+      });
+
+      document.addEventListener('keyup', (e) => {
+        if (e.key === 'ArrowLeft') keys.left = false;
+        if (e.key === 'ArrowRight') keys.right = false;
+        if (e.key === 'ArrowUp') keys.up = false;
+        if (e.key === 'ArrowDown') keys.down = false;
+      });
+
+      const handleControls = () => {
+        if (keys.left) roll -= 1;
+        if (keys.right) roll += 1;
+        if (keys.up) pitch += 1;
+        if (keys.down) pitch -= 1;
+
+        if (roll > 360) roll -= 360;
+        if (roll < 0) roll += 360;
+        if (pitch > 360) pitch -= 360;
+        if (pitch < 0) pitch += 360;
+      }
+
+      function animate() {
+        requestAnimationFrame(animate);
+        if (ship) {
+          handleControls();
+          shipContainer.rotation.z = Utils.degToRad(roll);
+          ship.rotation.x = Utils.degToRad(pitch);
+
+          
+          posProjection.position.z = Math.cos(Utils.degToRad(-pitch)) * shipSpeed;
+          posProjection.position.y = Math.sin(Utils.degToRad(-pitch)) * shipSpeed;
+
+          cameraPosProjection.position.z = Math.cos(Utils.degToRad(-pitch - 180 - cameraAngle)) * cameraDistance;
+          cameraPosProjection.position.y = Math.sin(Utils.degToRad(-pitch - 180 - cameraAngle)) * cameraDistance;
+          camera.position.z = Math.cos(Utils.degToRad(-pitch - 180 - cameraAngle)) * cameraDistance;
+          camera.position.y = Math.sin(Utils.degToRad(-pitch - 180 - cameraAngle)) * cameraDistance;
+          // camera.rotation.x = Utils.degToRad(pitch + cameraAngle);
+          // console.log(camera.rotation);
+
+          // camera.lookAt(ship.position);
+
+          posProjection.getWorldPosition(shipContainer.position);
+          // cameraPosProjection.getWorldPosition(camera.position);
+          // camera.lookAt(shipContainer.position);
+          camera.rotation.x = Utils.degToRad(cameraAngle+180+pitch);
+        }
+
+        renderer.render(scene, camera);
+      };
+
+      animate();
+    })();
+  </script>
+</body>
+
+</html>
