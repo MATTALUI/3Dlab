@@ -76,6 +76,36 @@
       // Grid Helper
       scene.add(new THREE.GridHelper(50, 11));
 
+      // Add some spheres to give reference to where things are.
+      for (let i = 0; i < 69; i++) {
+        const sphere1 = new THREE.Mesh(
+          new THREE.SphereGeometry(1, 100, 50),
+          new THREE.MeshStandardMaterial({
+            roughness: 0,
+            metalness: 0.25,
+            color: 0xFFFFFF,
+          }),
+        );
+        sphere1.position.x = (i + 1) * 10;
+        sphere1.position.y = (i + 1) * 10;
+        sphere1.position.z = (i + 1) * 10;
+        
+        const sphere2 = new THREE.Mesh(
+          new THREE.SphereGeometry(1, 100, 50),
+          new THREE.MeshStandardMaterial({
+            roughness: 0,
+            metalness: 0.25,
+            color: 0xFFFF00,
+          }),
+        );
+        sphere2.position.x = (Math.floor(Math.random() * 690) - (690 / 2));
+        sphere2.position.y = (Math.floor(Math.random() * 690) - (690 / 2));
+        sphere2.position.z = (Math.floor(Math.random() * 690) - (690 / 2));
+
+        scene.add(sphere1);
+        scene.add(sphere2);
+      }
+
       // Load Space Background
       const loader = new THREE.RGBELoader();
       loader.load("/images/hdri/space2.hdr", (texture) => {
@@ -105,7 +135,7 @@
         gltf => {
           ship = gltf.scene;
           shipContainer.add(ship);
-          // shipContainer.add(new THREE.GridHelper(25, 5));
+          shipContainer.add(new THREE.GridHelper(25, 5));
           shipContainer.add(camera);
 
           posProjection = new THREE.Mesh(
@@ -178,14 +208,8 @@
           cameraPosProjection.position.y = Math.sin(Utils.degToRad(-pitch - 180 - cameraAngle)) * cameraDistance;
           camera.position.z = Math.cos(Utils.degToRad(-pitch - 180 - cameraAngle)) * cameraDistance;
           camera.position.y = Math.sin(Utils.degToRad(-pitch - 180 - cameraAngle)) * cameraDistance;
-          // camera.rotation.x = Utils.degToRad(pitch + cameraAngle);
-          // console.log(camera.rotation);
-
-          // camera.lookAt(ship.position);
 
           posProjection.getWorldPosition(shipContainer.position);
-          // cameraPosProjection.getWorldPosition(camera.position);
-          // camera.lookAt(shipContainer.position);
           camera.rotation.x = Utils.degToRad(cameraAngle+180+pitch);
         }
 
