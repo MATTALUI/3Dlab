@@ -65,9 +65,10 @@
 
       // Camera
       const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-      camera.position.z = -15;
-      camera.position.y = 6;
-      camera.lookAt(new THREE.Vector3(0, 0, 0));
+
+      // Loaders
+      const pictureLoader = new THREE.RGBELoader();
+      const gltfLoader = new THREE.GLTFLoader();
 
       // Grid Helper
       scene.add(new THREE.GridHelper(50, 11));
@@ -103,8 +104,7 @@
       }
 
       // Load Space Background
-      const loader = new THREE.RGBELoader();
-      loader.load("/images/hdri/space2.hdr", (texture) => {
+      pictureLoader.load("/images/hdri/space2.hdr", (texture) => {
         texture.mapping = THREE.EquirectangularReflectionMapping;
         scene.background = texture;
         scene.environment = texture;
@@ -113,17 +113,16 @@
       let ship = null;
       let posProjection = null;
       let cameraPosProjection = null;
-      const shipSpeed = .2;
-      const cameraDistance = 17;
-      const cameraAngle = 21;
+      const shipSpeed = 0.5;
       const keys = {
         up: false,
         down: false,
         left: false,
         right: false,
       }
+
       // Load Ship
-      new THREE.GLTFLoader().load(
+      gltfLoader.load(
         '/models/ships/x1.glb',
         gltf => {
           ship = new THREE.Group();
@@ -131,6 +130,29 @@
           ship.add(shipMesh);
           ship.add(camera);
           scene.add(ship);
+
+          // TODO: Calculate camera position here
+          const cameraDistance = 17;
+          const cameraAngle = 21;
+          camera.position.z = -15;
+          camera.position.y = 6;
+          camera.lookAt(new THREE.Vector3(0, 0, 0));
+        },
+        xhr => console.log((xhr.loaded / xhr.total * 100) + '% loaded'),
+        console.error
+      );
+
+      // Load space stations
+      gltfLoader.load(
+        '/models/space-station.glb',
+        gltf => {
+          const station = new THREE.Group();
+          station.add(gltf.scene);
+          station.position.x = 420;
+          station.position.y = 420;
+          station.position.z = 420;
+
+          scene.add(station);
         },
         xhr => console.log((xhr.loaded / xhr.total * 100) + '% loaded'),
         console.error
