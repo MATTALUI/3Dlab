@@ -113,8 +113,12 @@
       let ship = null;
       let posProjection = null;
       let cameraPosProjection = null;
-      const shipSpeed = 0.5;
+      const shipStats = {
+        turning: 1,
+        speed: 0.5,
+      };
       const keys = {
+        gamepad: null,
         up: false,
         down: false,
         left: false,
@@ -174,32 +178,53 @@
 
       const handleInput = () => {
         // Handle main controls
-        let angle = 0;
-        let axis = new THREE.Vector3(1, 0, 0);
-        if (keys.up) {
-          angle += Utils.degToRad(1);
+        let pitchAngle = 0;
+        let rollAngle = 0;
+        if (keys.gamepad) {
+          const deadZoneThreshold = 0.01;
+          const rollValue = keys.gamepad.axes[1];
+          const pitchValue = keys.gamepad.axes[2];
+          if (Math.abs(rollValue) >= deadZoneThreshold) rollAngle = Utils.degToRad(rollValue);
+          if (Math.abs(pitchValue) >= deadZoneThreshold) pitchAngle = Utils.degToRad(-pitchValue);
+        } else {
+          if (keys.up) {
+            pitchAngle += Utils.degToRad(1);
+          }
+          if (keys.down) {
+            pitchAngle -= Utils.degToRad(1);
+          }
+          if (keys.left) {
+            rollAngle -= Utils.degToRad(1);
+          }
+          if (keys.right) {
+            rollAngle += Utils.degToRad(1);
+          }
         }
-        if (keys.down) {
-          angle -= Utils.degToRad(1);
-        }
-        ship.rotateOnAxis(axis, angle);
 
-        angle = 0;
-        axis = new THREE.Vector3(0, 0, 1);
-        if (keys.left) {
-          angle -= Utils.degToRad(1);
-        }
-        if (keys.right) {
-          angle += Utils.degToRad(1);
-        }
-        ship.rotateOnAxis(axis, angle);
+        ship.rotateOnAxis(new THREE.Vector3(1, 0, 0), pitchAngle * shipStats.turning);
+        ship.rotateOnAxis(new THREE.Vector3(0, 0, 1), rollAngle * shipStats.turning);
       }
+
+      window.addEventListener("gamepadconnected", (e) => {
+        console.log("Gamepad connected at index %d: %s. %d buttons, %d axes.",
+          e.gamepad.index, e.gamepad.id,
+          e.gamepad.buttons.length, e.gamepad.axes.length);
+
+          keys.gamepad = e.gamepad;
+      });
+
+      window.addEventListener("gamepaddisconnected", (e) => {
+        console.log("Gamepad disconnected from index %d: %s",
+          e.gamepad.index, e.gamepad.id);
+
+          keys.gamepad = null;
+      });
 
       function animate() {
         requestAnimationFrame(animate);
         if (ship) {
           handleInput();
-          ship.translateZ(shipSpeed);
+          ship.translateZ(shipStats.speed);
         }
 
         renderer.render(scene, camera);
