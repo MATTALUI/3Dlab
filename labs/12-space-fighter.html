@@ -56,70 +56,6 @@
   </nav>
   <script>
     (async () => {
-      const scene = new THREE.Scene();
-      const renderer = new THREE.WebGLRenderer();
-      renderer.setSize(window.innerWidth, window.innerHeight);
-      renderer.outputEncoding = THREE.sRGBEncoding;
-      renderer.toneMapping = THREE.ACESFilmicToneMapping;
-      document.body.appendChild(renderer.domElement);
-
-      // Camera
-      const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-
-      // Loaders
-      const pictureLoader = new THREE.RGBELoader();
-      const gltfLoader = new THREE.GLTFLoader();
-
-      // Grid Helper
-      // scene.add(new THREE.GridHelper(50, 11));
-
-      // Add some spheres to give reference to where things are.
-      // for (let i = 0; i < 69; i++) {
-      //   const sphere1 = new THREE.Mesh(
-      //     new THREE.SphereGeometry(1, 100, 50),
-      //     new THREE.MeshStandardMaterial({
-      //       roughness: 0,
-      //       metalness: 0.25,
-      //       color: 0xFFFFFF,
-      //     }),
-      //   );
-      //   sphere1.position.x = (i + 1) * 10;
-      //   sphere1.position.y = (i + 1) * 10;
-      //   sphere1.position.z = (i + 1) * 10;
-
-      //   const sphere2 = new THREE.Mesh(
-      //     new THREE.SphereGeometry(1, 100, 50),
-      //     new THREE.MeshStandardMaterial({
-      //       roughness: 0,
-      //       metalness: 0.25,
-      //       color: 0xFFFF00,
-      //     }),
-      //   );
-      //   sphere2.position.x = (Math.floor(Math.random() * 690) - (690 / 2));
-      //   sphere2.position.y = (Math.floor(Math.random() * 690) - (690 / 2));
-      //   sphere2.position.z = (Math.floor(Math.random() * 690) - (690 / 2));
-
-      //   scene.add(sphere1);
-      //   scene.add(sphere2);
-      // }
-
-      // Load Space Background
-      pictureLoader.load("/images/hdri/space2.hdr", (texture) => {
-        texture.mapping = THREE.EquirectangularReflectionMapping;
-        scene.background = texture;
-        scene.environment = texture;
-      });
-
-      let ship = null;
-      let posProjection = null;
-      let cameraPosProjection = null;
-      let coolDown = 0;
-      const bullets = [];
-      const shipStats = {
-        turning: 1,
-        speed: 0.5,
-        weaponCoolDown: 25,
-      };
       const keys = {
         gamepad: null,
         up: false,
@@ -128,43 +64,6 @@
         right: false,
         firing: false,
       };
-
-      // Load Ship
-      gltfLoader.load(
-        '/models/ships/x1.glb',
-        gltf => {
-          ship = new THREE.Group();
-          shipMesh = gltf.scene;
-          ship.add(shipMesh);
-          ship.add(camera);
-          scene.add(ship);
-
-          // TODO: Calculate camera position here
-          const cameraDistance = 17;
-          const cameraAngle = 21;
-          camera.position.z = -15;
-          camera.position.y = 6;
-          camera.lookAt(new THREE.Vector3(0, 0, 0));
-        },
-        xhr => console.log((xhr.loaded / xhr.total * 100) + '% loaded'),
-        console.error
-      );
-
-      // Load space stations
-      gltfLoader.load(
-        '/models/space-station.glb',
-        gltf => {
-          const station = new THREE.Group();
-          station.add(gltf.scene);
-          station.position.x = 420;
-          station.position.y = 420;
-          station.position.z = 420;
-
-          scene.add(station);
-        },
-        xhr => console.log((xhr.loaded / xhr.total * 100) + '% loaded'),
-        console.error
-      );
 
       document.addEventListener('keydown', (e) => {
         if (e.key === 'ArrowLeft') keys.left = true;
@@ -182,68 +81,6 @@
         if (e.key === ' ') keys.firing = false;
       });
 
-      const fireWeapons = () => {
-        if (coolDown) coolDown -= 1;
-        if (!keys.firing || coolDown > 0) return;
-        // TODO: If we're going to fire weapons, we need to clean them up too.
-        const bullet = new THREE.Group();
-        const bulletMesh = new THREE.Mesh(
-          new THREE.SphereGeometry(0.5, 4, 4),
-          new THREE.MeshStandardMaterial({
-            roughness: 0,
-            metalness: 0.25,
-            color: 0xFF3300,
-            emissive: 0xFF3300,
-          }),
-        );
-        bullet.add(bulletMesh);
-        bullet.add(new THREE.PointLight(0xFF3300, 1, 50));
-
-        bullet.position.copy(ship.position);
-        bullet.rotation.copy(ship.rotation);
-
-        scene.add(bullet);
-
-        bullets.push(bullet);
-
-        console.log('Fire!');
-        coolDown = shipStats.weaponCoolDown;
-      }
-
-      const moveObjects = () => {
-        ship.translateZ(shipStats.speed);
-        bullets.forEach(b => b.translateZ(3));
-      }
-
-      const handleMovementControls = () => {
-        // Handle main controls
-        let pitchAngle = 0;
-        let rollAngle = 0;
-        if (keys.gamepad) {
-          const deadZoneThreshold = 0.01;
-          const rollValue = keys.gamepad.axes[1];
-          const pitchValue = keys.gamepad.axes[2];
-          if (Math.abs(rollValue) >= deadZoneThreshold) rollAngle = Utils.degToRad(rollValue);
-          if (Math.abs(pitchValue) >= deadZoneThreshold) pitchAngle = Utils.degToRad(-pitchValue);
-        } else {
-          if (keys.up) {
-            pitchAngle += Utils.degToRad(1);
-          }
-          if (keys.down) {
-            pitchAngle -= Utils.degToRad(1);
-          }
-          if (keys.left) {
-            rollAngle -= Utils.degToRad(1);
-          }
-          if (keys.right) {
-            rollAngle += Utils.degToRad(1);
-          }
-        }
-
-        ship.rotateOnAxis(new THREE.Vector3(1, 0, 0), pitchAngle * shipStats.turning);
-        ship.rotateOnAxis(new THREE.Vector3(0, 0, 1), rollAngle * shipStats.turning);
-      }
-
       window.addEventListener("gamepadconnected", (e) => {
         console.log("Gamepad connected at index %d: %s. %d buttons, %d axes.",
           e.gamepad.index, e.gamepad.id,
@@ -259,18 +96,228 @@
         keys.gamepad = null;
       });
 
-      function animate() {
-        requestAnimationFrame(animate);
-        if (ship) {
-          handleMovementControls();
-          fireWeapons();
-          moveObjects();
+      class GameObject {
+        constructor(game) {
+          this.game = game;
+          this.group = new THREE.Group();
+          this.id = this.group.uuid;
+          game.scene.add(this.group);
         }
 
-        renderer.render(scene, camera);
-      };
+        async load() { }
 
-      animate();
+        update() { }
+      }
+
+      class Ship extends GameObject {
+        constructor(game) {
+          super(game);
+          this.turning = 1;
+          this.speed = 0.5;
+          this.weaponCoolDown = 30;
+          this.coolDown = 0;
+        }
+      }
+
+      class Bullet extends GameObject {
+        constructor(ship) {
+          super(ship.game);
+          this.ship = ship;
+          this.life = 150;
+
+          const bulletMesh = new THREE.Mesh(
+            new THREE.SphereGeometry(0.4, 4, 4),
+            new THREE.MeshStandardMaterial({
+              roughness: 0,
+              metalness: 0.25,
+              color: 0xFF3300,
+              emissive: 0xFF3300,
+            }),
+          );
+          this.group.add(bulletMesh);
+          this.group.add(new THREE.PointLight(0xFF3300, 1, 50));
+
+          this.group.position.copy(ship.group.position);
+          this.group.rotation.copy(ship.group.rotation);
+        }
+
+        update() {
+          this.life--;
+          this.group.translateZ(3);
+        }
+
+        get isAlive() {
+          const isAlive = this.life > 0;
+          if (!isAlive) {
+            this.game.scene.remove(this.group);
+          }
+
+          return isAlive;
+        }
+      }
+
+      class PlayerShip extends Ship {
+        async load() {
+          await super.load();
+          await new Promise((res, rej) => this.game.gltfLoader.load(
+            '/models/ships/x1.glb',
+            gltf => {
+              this.group.add(gltf.scene);
+              this.group.add(game.camera);
+
+              // TODO: Calculate camera position here
+              const cameraDistance = 17;
+              const cameraAngle = 21;
+              game.camera.position.z = -15;
+              game.camera.position.y = 6;
+              game.camera.lookAt(new THREE.Vector3(0, 0, 0));
+              res();
+            },
+            xhr => console.log((xhr.loaded / xhr.total * 100) + '% loaded'),
+            console.error
+          ));
+        }
+
+        update() {
+          super.update();
+          this.handleMovementControls();
+          this.fireWeapons();
+          this.group.translateZ(this.speed);
+        }
+
+        handleMovementControls() {
+          // Handle main controls
+          let pitchAngle = 0;
+          let rollAngle = 0;
+          if (keys.gamepad) {
+            const deadZoneThreshold = 0.01;
+            const rollValue = keys.gamepad.axes[1];
+            const pitchValue = keys.gamepad.axes[2];
+            if (Math.abs(rollValue) >= deadZoneThreshold) rollAngle = Utils.degToRad(rollValue);
+            if (Math.abs(pitchValue) >= deadZoneThreshold) pitchAngle = Utils.degToRad(-pitchValue);
+          } else {
+            if (keys.up) {
+              pitchAngle += Utils.degToRad(1);
+            }
+            if (keys.down) {
+              pitchAngle -= Utils.degToRad(1);
+            }
+            if (keys.left) {
+              rollAngle -= Utils.degToRad(1);
+            }
+            if (keys.right) {
+              rollAngle += Utils.degToRad(1);
+            }
+          }
+
+          this.group.rotateOnAxis(new THREE.Vector3(1, 0, 0), pitchAngle * this.turning);
+          this.group.rotateOnAxis(new THREE.Vector3(0, 0, 1), rollAngle * this.turning);
+        }
+
+        fireWeapons() {
+          const isFiring = (keys.gamepad && keys.gamepad.buttons[0].pressed) || keys.firing;
+          if (this.coolDown) this.coolDown -= 1;
+          if (!isFiring || this.coolDown > 0) return;
+          const bullet = new Bullet(this);
+          this.game.bullets.push(bullet);
+
+          this.coolDown = this.weaponCoolDown;
+        }
+      }
+
+
+
+      class Game {
+        constructor() {
+          // Basic THREE Initialization
+          this.scene = new THREE.Scene();
+          this.renderer = new THREE.WebGLRenderer();
+          this.renderer.setSize(window.innerWidth, window.innerHeight);
+          this.renderer.outputEncoding = THREE.sRGBEncoding;
+          this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+          document.body.appendChild(this.renderer.domElement);
+          // Camera
+          this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+          // Loaders
+          this.pictureLoader = new THREE.RGBELoader();
+          this.gltfLoader = new THREE.GLTFLoader();
+          // Game objects
+          this.ship = new PlayerShip(this);
+          this.bullets = [];
+
+        }
+
+        async loadWorld() {
+          const promises = [];
+          // Set background
+          promises.push(new Promise((res, rej) => {
+            this.pictureLoader.load("/images/hdri/space2.hdr", (texture) => {
+              texture.mapping = THREE.EquirectangularReflectionMapping;
+              this.scene.background = texture;
+              this.scene.environment = texture;
+              res();
+            });
+          }));
+          // Load space stations
+          promises.push(new Promise((res, rej) => {
+            this.gltfLoader.load(
+              '/models/space-station.glb',
+              gltf => {
+                const station = new THREE.Group();
+                station.add(gltf.scene);
+                station.position.x = 420;
+                station.position.y = 420;
+                station.position.z = 420;
+
+                this.scene.add(station);
+                res();
+              },
+              xhr => console.log((xhr.loaded / xhr.total * 100) + '% loaded'),
+              console.error
+            );
+          }));
+          // Load Landing Pad
+          promises.push(new Promise((res, rej) => this.gltfLoader.load(
+            '/models/landingpad.glb',
+            gltf => {
+              const pad = new THREE.Group();
+              pad.add(gltf.scene);
+
+              for (let i = 0; i < 5; i++) {
+                const padCopy = pad.clone();
+                padCopy.position.y = -10;
+                padCopy.position.z = 10;
+                padCopy.position.x = i * 200;
+
+                this.scene.add(padCopy);
+              }
+              res();
+            },
+            xhr => console.log((xhr.loaded / xhr.total * 100) + '% loaded'),
+            console.error
+          )));
+
+          await this.ship.load(this);
+
+          return await Promise.all(promises);
+        }
+
+        run() {
+          requestAnimationFrame(() => this.run());
+          if (this.ship) this.ship.update();
+          this.bullets = this.bullets.filter(bullet => {
+            bullet.update();
+
+            return bullet.isAlive;
+          });
+
+          this.renderer.render(this.scene, this.camera);
+        }
+      }
+
+      const game = new Game();
+      await game.loadWorld();
+      game.run();
     })();
   </script>
 </body>
