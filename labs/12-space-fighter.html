@@ -66,6 +66,31 @@
         firing: false,
       };
 
+      const loaderMap = {
+        abductor: {
+          camera: { x: 0, y: 6, z: -20 },
+          colliders: [
+            { dimensions: { x: 14, y: 2, z: 14 }, position: { x: 0, y: -1, z: 0 } },
+            { dimensions: { x: 10, y: 1, z: 18 }, position: { x: 0, y: -1, z: 0 } },
+            { dimensions: { x: 18, y: 1, z: 10 }, position: { x: 0, y: -1, z: 0 } },
+            { dimensions: { x: 6, y: 7, z: 6 }, position: { x: 0, y: 1, z: 0 } },
+          ],
+        },
+        bomber: {},
+        falcon: {
+          camera: { x: 0, y: 6, z: -20 },
+        },
+        reactor: {},
+        viper: {
+          camera: { x: 0, y: 10, z: -60 },
+        },
+        x1: {
+          colliders: [
+            { dimensions: { x: 4, y: 4, z: 15.5 } },
+          ],
+        },
+      };
+
       document.addEventListener('keydown', (e) => {
         if (e.key === 'ArrowLeft') keys.left = true;
         if (e.key === 'ArrowRight') keys.right = true;
@@ -131,6 +156,29 @@
         }
       }
 
+      Collider.buildColliderMesh = ({ dimensions, position }) => {
+        const geometry = new THREE.BoxGeometry(
+          dimensions.x,
+          dimensions.y,
+          dimensions.z
+        );
+
+        const wireframe = new THREE.WireframeGeometry(geometry);
+
+        const colliderFrame = new THREE.LineSegments(wireframe);
+        colliderFrame.material.depthTest = false;
+        colliderFrame.material.opacity = 0.25;
+        colliderFrame.material.transparent = true;
+
+        if (position) {
+          colliderFrame.position.x = position.x || 0;
+          colliderFrame.position.y = position.y || 0;
+          colliderFrame.position.z = position.z || 0;
+        }
+
+        return colliderFrame;
+      };
+
       class GameObject {
         constructor(game) {
           this.game = game;
@@ -156,6 +204,11 @@
           // this.speed = 0;
           this.weaponCoolDown = 30;
           this.coolDown = 0;
+          this.shipType = 'falcon';
+        }
+
+        get loaderMap() {
+          return loaderMap[this.shipType] || {};
         }
       }
 
@@ -212,29 +265,21 @@
       class PlayerShip extends Ship {
         async load() {
           // Add colliders
-          const geometry = new THREE.BoxGeometry(4, 4, 15.5);
-
-          const wireframe = new THREE.WireframeGeometry(geometry);
-
-          const colliderFrame = new THREE.LineSegments(wireframe);
-          colliderFrame.material.depthTest = false;
-          colliderFrame.material.opacity = 0.25;
-          colliderFrame.material.transparent = true;
-
-          this.collider.addMesh(colliderFrame);
+          (this.loaderMap.colliders || []).forEach(colliderLoadingData => {
+            this.collider.addMesh(Collider.buildColliderMesh(colliderLoadingData));
+          });
 
           await super.load();
           await new Promise((res, rej) => this.game.gltfLoader.load(
-            '/models/ships/x1.glb',
+            `/models/ships/${this.shipType}.glb`,
             gltf => {
               this.group.add(gltf.scene);
               this.group.add(game.camera);
 
               // TODO: Calculate camera position here
-              const cameraDistance = 17;
-              const cameraAngle = 21;
-              game.camera.position.z = -15;
-              game.camera.position.y = 6;
+              const cameraPos = this.loaderMap.camera || { x: 0, y: 6, z: -15 };
+              game.camera.position.z = cameraPos.z;
+              game.camera.position.y = cameraPos.y;
               game.camera.lookAt(new THREE.Vector3(0, 0, 0));
               res();
             },
