@@ -9,7 +9,8 @@
   <script src="/js/utils.js"></script>
   <script src="/js/three-loaders/RGBELoader-147.js"></script>
   <script src="/js/three-loaders/GLTFLoader-147.js"></script>
-  <title>Space FIghter</title>
+  <script src="/js/three-controls/OrbitControls-146.js"></script>
+  <title>Space Fighter</title>
   <style>
     html,
     body {
@@ -96,17 +97,55 @@
         keys.gamepad = null;
       });
 
+      class Collider {
+        constructor() {
+          this.group = new THREE.Group();
+          this.meshes = [];
+          this.boxMap = {};
+        }
+
+        update() {
+          this.meshes.forEach(mesh => {
+            const box = this.boxMap[mesh.uuid];
+            mesh.geometry.computeBoundingBox();
+            box.copy(mesh.geometry.boundingBox).applyMatrix4(mesh.matrixWorld);
+          });
+        }
+
+        addMesh(mesh) {
+          this.meshes.push(mesh);
+          this.group.add(mesh);
+          this.boxMap[mesh.uuid] = new THREE.Box3();
+        }
+
+        checkCollision(collider) {
+          for (const meshId in this.boxMap) {
+            const box = this.boxMap[meshId];
+            for (const colliderMeshId in collider.boxMap) {
+              const colliderBox = collider.boxMap[colliderMeshId];
+              if (box.intersectsBox(colliderBox)) return true;
+            }
+          }
+
+          return false;
+        }
+      }
+
       class GameObject {
         constructor(game) {
           this.game = game;
           this.group = new THREE.Group();
           this.id = this.group.uuid;
+          this.collider = new Collider();
           game.scene.add(this.group);
+          this.group.add(this.collider.group);
         }
 
         async load() { }
 
-        update() { }
+        update() {
+          this.collider.update();
+        }
       }
 
       class Ship extends GameObject {
@@ -114,6 +153,7 @@
           super(game);
           this.turning = 1;
           this.speed = 0.5;
+          // this.speed = 0;
           this.weaponCoolDown = 30;
           this.coolDown = 0;
         }
@@ -139,9 +179,22 @@
 
           this.group.position.copy(ship.group.position);
           this.group.rotation.copy(ship.group.rotation);
+
+          // Add colliders
+          const geometry = new THREE.BoxGeometry(.6, .6, .6);
+
+          const wireframe = new THREE.WireframeGeometry(geometry);
+
+          const colliderFrame = new THREE.LineSegments(wireframe);
+          colliderFrame.material.depthTest = false;
+          colliderFrame.material.opacity = 0.25;
+          colliderFrame.material.transparent = true;
+
+          this.collider.addMesh(colliderFrame);
         }
 
         update() {
+          super.update();
           this.life--;
           this.group.translateZ(3);
         }
@@ -158,6 +211,18 @@
 
       class PlayerShip extends Ship {
         async load() {
+          // Add colliders
+          const geometry = new THREE.BoxGeometry(4, 4, 15.5);
+
+          const wireframe = new THREE.WireframeGeometry(geometry);
+
+          const colliderFrame = new THREE.LineSegments(wireframe);
+          colliderFrame.material.depthTest = false;
+          colliderFrame.material.opacity = 0.25;
+          colliderFrame.material.transparent = true;
+
+          this.collider.addMesh(colliderFrame);
+
           await super.load();
           await new Promise((res, rej) => this.game.gltfLoader.load(
             '/models/ships/x1.glb',
@@ -244,7 +309,8 @@
           // Game objects
           this.ship = new PlayerShip(this);
           this.bullets = [];
-
+          // Orbital Camera Controls
+          // this.controls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
         }
 
         async loadWorld() {
@@ -304,11 +370,20 @@
 
         run() {
           requestAnimationFrame(() => this.run());
+          // this.controls.update();
+          // Make Updates
           if (this.ship) this.ship.update();
           this.bullets = this.bullets.filter(bullet => {
             bullet.update();
 
             return bullet.isAlive;
+          });
+
+          // Check Collisions
+          this.bullets.forEach(bullet => {
+            if (bullet.collider.checkCollision(this.ship.collider)) {
+              console.log("its colliding!");
+            }
           });
 
           this.renderer.render(this.scene, this.camera);
